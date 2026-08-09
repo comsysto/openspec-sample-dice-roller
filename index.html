@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D Dice Roller</title>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+  :root {
+    --die-size: 120px;
+    --spin-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: radial-gradient(ellipse at center, #2f6b46 0%, #1d4a30 55%, #10281a 100%);
+    color: #f4f1e8;
+  }
+
+  .scene {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    padding: 40px;
+  }
+
+  .table-surface {
+    position: relative;
+    width: 320px;
+    height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .shadow {
+    position: absolute;
+    bottom: 54px;
+    width: 140px;
+    height: 34px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0) 70%);
+    filter: blur(6px);
+    transform: scale(1);
+    opacity: 1;
+    transition: transform 0.9s var(--spin-ease), opacity 0.9s var(--spin-ease), filter 0.9s var(--spin-ease);
+  }
+
+  .scene.lifted .shadow {
+    transform: scale(0.65);
+    opacity: 0.45;
+    filter: blur(14px);
+  }
+
+  .cube-stage {
+    perspective: 800px;
+  }
+
+  .cube-wrapper {
+    transition: transform 0.9s var(--spin-ease);
+  }
+
+  .scene.lifted .cube-wrapper {
+    transform: translateY(-16px) scale(1.06);
+  }
+
+  .cube {
+    position: relative;
+    width: var(--die-size);
+    height: var(--die-size);
+    transform-style: preserve-3d;
+    transition-property: transform;
+    transition-timing-function: var(--spin-ease);
+  }
+
+  .face {
+    position: absolute;
+    inset: 0;
+    border-radius: 16%;
+    background: linear-gradient(135deg, #fffef8 0%, #f4efe1 45%, #d9d1bd 100%);
+    box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.08);
+  }
+
+  .face.front  { transform: translateZ(calc(var(--die-size) / 2)); }
+  .face.back   { transform: rotateY(180deg) translateZ(calc(var(--die-size) / 2)); }
+  .face.right  { transform: rotateY(90deg) translateZ(calc(var(--die-size) / 2)); }
+  .face.left   { transform: rotateY(-90deg) translateZ(calc(var(--die-size) / 2)); }
+  .face.top    { transform: rotateX(90deg) translateZ(calc(var(--die-size) / 2)); }
+  .face.bottom { transform: rotateX(-90deg) translateZ(calc(var(--die-size) / 2)); }
+
+  .pips {
+    position: absolute;
+    inset: 14%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+  }
+
+  .pip {
+    width: 78%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    justify-self: center;
+    align-self: center;
+    background: radial-gradient(circle at 32% 32%, #4a4a4a, #050505 72%);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  }
+
+  .pips-1 .pip:nth-child(1) { grid-column: 2; grid-row: 2; }
+
+  .pips-2 .pip:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .pips-2 .pip:nth-child(2) { grid-column: 3; grid-row: 3; }
+
+  .pips-3 .pip:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .pips-3 .pip:nth-child(2) { grid-column: 2; grid-row: 2; }
+  .pips-3 .pip:nth-child(3) { grid-column: 3; grid-row: 3; }
+
+  .pips-4 .pip:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .pips-4 .pip:nth-child(2) { grid-column: 3; grid-row: 1; }
+  .pips-4 .pip:nth-child(3) { grid-column: 1; grid-row: 3; }
+  .pips-4 .pip:nth-child(4) { grid-column: 3; grid-row: 3; }
+
+  .pips-5 .pip:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .pips-5 .pip:nth-child(2) { grid-column: 3; grid-row: 1; }
+  .pips-5 .pip:nth-child(3) { grid-column: 2; grid-row: 2; }
+  .pips-5 .pip:nth-child(4) { grid-column: 1; grid-row: 3; }
+  .pips-5 .pip:nth-child(5) { grid-column: 3; grid-row: 3; }
+
+  .pips-6 .pip:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .pips-6 .pip:nth-child(2) { grid-column: 1; grid-row: 2; }
+  .pips-6 .pip:nth-child(3) { grid-column: 1; grid-row: 3; }
+  .pips-6 .pip:nth-child(4) { grid-column: 3; grid-row: 1; }
+  .pips-6 .pip:nth-child(5) { grid-column: 3; grid-row: 2; }
+  .pips-6 .pip:nth-child(6) { grid-column: 3; grid-row: 3; }
+
+  .roll-button {
+    padding: 12px 32px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1d4a30;
+    background: linear-gradient(180deg, #fffef8, #e7e0cc);
+    border: none;
+    border-radius: 999px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+  }
+
+  .roll-button:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
+
+  .roll-button:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .roll-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .status {
+    min-height: 1.2em;
+    margin: 0;
+    font-size: 1rem;
+  }
+</style>
+</head>
+<body>
+  <main class="scene" x-data="diceRoller()" :class="{ lifted: rolling }">
+    <div class="table-surface">
+      <div class="shadow"></div>
+      <div class="cube-stage">
+        <div class="cube-wrapper">
+          <div class="cube" :style="cubeStyle">
+            <div class="face front"><div class="pips pips-1"><span class="pip"></span></div></div>
+            <div class="face back">
+              <div class="pips pips-6">
+                <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+                <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+              </div>
+            </div>
+            <div class="face right"><div class="pips pips-2"><span class="pip"></span><span class="pip"></span></div></div>
+            <div class="face left">
+              <div class="pips pips-5">
+                <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+                <span class="pip"></span><span class="pip"></span>
+              </div>
+            </div>
+            <div class="face top"><div class="pips pips-3"><span class="pip"></span><span class="pip"></span><span class="pip"></span></div></div>
+            <div class="face bottom">
+              <div class="pips pips-4">
+                <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="roll-button" @click="roll()" :disabled="rolling">
+      <span x-text="rolling ? 'Rolling…' : 'Roll'"></span>
+    </button>
+
+    <p class="status" aria-live="polite" x-text="result ? `You rolled a ${result}` : ''"></p>
+  </main>
+
+  <script>
+    function diceRoller() {
+      // Global cube rotation needed to bring a given face value to the front.
+      // Each entry is the inverse of that face's own local placement transform
+      // (see .face.* rules in <style>), so landing on the correct face is
+      // guaranteed by construction, independent of any extra spin added.
+      const FACE_ROTATIONS = {
+        1: { x: 0, y: 0 },
+        6: { x: 0, y: 180 },
+        2: { x: 0, y: -90 },
+        5: { x: 0, y: 90 },
+        3: { x: -90, y: 0 },
+        4: { x: 90, y: 0 },
+      };
+
+      const SPIN_MS = 900;
+      const SETTLE_MS = 260;
+
+      function wait(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      return {
+        rolling: false,
+        result: null,
+        rotX: 0,
+        rotY: 0,
+        transitionMs: SPIN_MS,
+
+        get cubeStyle() {
+          return `transition-duration: ${this.transitionMs}ms; transform: rotateX(${this.rotX}deg) rotateY(${this.rotY}deg);`;
+        },
+
+        async roll() {
+          if (this.rolling) return;
+          this.rolling = true;
+          this.result = null;
+
+          const value = 1 + Math.floor(Math.random() * 6);
+          const base = FACE_ROTATIONS[value];
+
+          const extraTurns = () => (2 + Math.floor(Math.random() * 2)) * 360 * (Math.random() < 0.5 ? -1 : 1);
+          const spinX = extraTurns();
+          const spinY = extraTurns();
+          const targetX = base.x + spinX;
+          const targetY = base.y + spinY;
+          const overshootX = targetX + Math.sign(spinX || 1) * 10;
+          const overshootY = targetY + Math.sign(spinY || 1) * 10;
+
+          // Lift + main multi-axis spin, eased out, slightly overshooting the target.
+          this.transitionMs = SPIN_MS;
+          this.rotX = overshootX;
+          this.rotY = overshootY;
+          await wait(SPIN_MS);
+
+          // Settle wobble back onto the exact target face, then land.
+          this.transitionMs = SETTLE_MS;
+          this.rotX = targetX;
+          this.rotY = targetY;
+          await wait(SETTLE_MS);
+
+          this.rolling = false;
+          this.result = value;
+        },
+      };
+    }
+  </script>
+</body>
+</html>
