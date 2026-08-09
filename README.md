@@ -1,2 +1,2 @@
 # openspec-sample-dice-roller
-A extremely simple dice roller application used for our blog post on Spec-driuven deveopment (SDD).
+A extremely simple dice roller application used for our blog post on Spec-driven deveopment (SDD).
